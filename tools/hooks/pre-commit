@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# 提交前自动跑一次「文档代码块能否编译」的校验。
+#
+# 安装（每个 clone 执行一次）：
+#     git config core.hooksPath tools/hooks
+#
+# 只校验本次暂存（staged）的 .md / .applescript 文件，所以通常一两秒就结束。
+# 临时跳过：git commit --no-verify
+set -uo pipefail
+
+if ! command -v osacompile >/dev/null 2>&1; then
+    echo "pre-commit: 找不到 osacompile（非 macOS？），跳过代码块校验。"
+    exit 0
+fi
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "pre-commit: 找不到 python3，跳过代码块校验。"
+    exit 0
+fi
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+targets=()
+while IFS= read -r path; do
+    [ -n "$path" ] && targets+=("$path")
+done < <(git diff --cached --name-only --diff-filter=ACM -- '*.md' 'examples/*.applescript')
+
+if [ ${#targets[@]} -eq 0 ]; then
+    echo "pre-commit: 本次没有改动文档/示例，跳过校验。"
+    exit 0
+fi
+
+echo "pre-commit: 校验 ${#targets[@]} 个文件的 AppleScript 代码块…"
+if python3 tools/check-code-blocks.py "${targets[@]}"; then
+    exit 0
+fi
+
+cat <<'MSG'
+
+pre-commit: 代码块校验未通过，提交已被拦下。
+  - 「❌ 意外编译失败」= 示例被改坏了，请修好再提交
+  - 「标了 ❌ 却能编译」= 文档里那条「这样写会报错」的结论已经过时，请更新正文
+  - 确实要跳过：git commit --no-verify
+MSG
+exit 1

@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+._*
+.AppleDouble
+.LSOverride
+Icon?
+.Spotlight-V100
+.Trashes
+
+# 编辑器 / 临时文件
+*.swp
+*~
+.idea/
+.vscode/
+
+# 脚本运行产物（examples/lib/stdlib.scpt 是刻意提交的，不要忽略）
+debug.log
+*.log
+_chk.scpt
